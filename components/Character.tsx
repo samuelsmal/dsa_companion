@@ -202,7 +202,30 @@ const Character = () => {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Talente</Text>
                     <View style={styles.sectionContent}>
-                        <Talents locale={locale} characterTalents={characterData.talents} />
+                        <Talents locale={locale}
+                                 characterTalents={characterData.talents}
+                                 characterAttributes={characterData.attr.values}/>
+                    </View>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Vorteile</Text>
+                    <View style={styles.sectionContent}>
+                        <Text>TODO</Text>
+                    </View>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Nachteile</Text>
+                    <View style={styles.sectionContent}>
+                        <Text>TODO</Text>
+                    </View>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Allgemeine Sonderfertigkeiten</Text>
+                    <View style={styles.sectionContent}>
+                        <Text>TODO</Text>
                     </View>
                 </View>
 
