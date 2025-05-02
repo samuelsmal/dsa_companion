@@ -5,6 +5,7 @@ import {RawHero} from "@/constants/types/RawHero";
 import {createSections, generateRandomInteger, groupBy} from "@/constants/HelperFunctions";
 import {AttributeColors, Colors} from "@/constants/Colors";
 import {AntDesign} from "@expo/vector-icons";
+import {getAttributeNames, getTalents} from "@/constants/OptolithDatabase";
 
 type TalentProps = {
     locale: string;
@@ -187,31 +188,14 @@ const Talents = (props: TalentProps) => {
 
     useEffect(() => {
         async function setup() {
-            const attributeNames= await db.getAllAsync<{ id: string, name: string }>(
-                "SELECT id, short as name FROM '" + props.locale + "__attributes' ORDER BY id"
-            );
-
-            const attributeNamesMap = new Map(attributeNames.map(item => [item.id, item.name]))
+            const attributeNames = await getAttributeNames(db, props.locale);
 
             setAttrs(new Map<string, {value: number, name: string}>(
                 props.characterAttributes.map(item =>
-                    [item.id, {value: item.value, name: attributeNamesMap.get(item.id) || ""}])
+                    [item.id, {value: item.value, name: attributeNames.get(item.id) || ""}])
             ))
 
-            const allTalents = await db.getAllAsync<{
-                id: string,
-                check1: string,
-                check2: string,
-                check3: string,
-                gr: number,
-                skillName: string,
-                groupName: string
-            }>(
-                "SELECT US.id, US.check1, US.check2, US.check3, US.gr, LS.name AS skillName, LSG.name AS groupName " +
-                " FROM univ__skills AS US" +
-                " INNER JOIN " + props.locale + "__skills AS LS ON US.id = LS.id" +
-                " INNER JOIN " + props.locale + "__skill_groups AS LSG ON US.gr = LSG.id"
-            );
+            const allTalents = await getTalents(db, props.locale);
 
             const givenTalents = new Map<string, number>(
                 Object.keys(props.characterTalents).map(k => [k, props.characterTalents[k]]));

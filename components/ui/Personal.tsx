@@ -53,11 +53,13 @@ const Personal = (props: PersonalProps) => {
         }
     }
 
-    const renderItem = (name: string, value: number | string | undefined) => {
+    const renderItem = (name: string, value: number | string | undefined, subValue: number | string | undefined) => {
         return (
             <View style={styles.item}>
                 <Text style={styles.name}>{name}</Text>
                 <Text style={styles.value}>{value}</Text>
+                { subValue && <Text style={styles.value}>{value}</Text>
+}
             </View>
         )
     }

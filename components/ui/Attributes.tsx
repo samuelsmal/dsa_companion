@@ -2,11 +2,12 @@ import {StyleSheet, Text, View} from "react-native";
 import {useSQLiteContext} from "expo-sqlite";
 import {useEffect, useState} from "react";
 import {AttributeColors} from "@/constants/Colors";
+import {CalculatedAttributes} from "@/constants/OptolithDatabase";
 
 type AttributesProps = {
     locale: string;
     characterAttributes: { id: string, value: number }[]
-    lp: number
+    calculatedAttributes: CalculatedAttributes | undefined
 }
 
 type Attribute = {
@@ -79,12 +80,17 @@ const Attributes = (props: AttributesProps) => {
                 }
             </View>
             <View style={styles.row}>
-                <View style={styles.item}>
-                    <View style={styles.innerItemBox}>
-                        <Text style={styles.name}>LP</Text>
-                        <Text style={styles.value}>{props.lp}</Text>
-                    </View>
-                </View>
+                {
+                    props.calculatedAttributes && Object.keys(props.calculatedAttributes).map((k, index) => (
+                        <View style={styles.item}
+                              key={"calc_attr__" + index}
+                        >
+                            <View style={styles.innerItemBox}>
+                                <Text style={styles.name}>{k}</Text>
+                            </View>
+                        </View>
+                    ))
+                }
             </View>
         </View>
     )

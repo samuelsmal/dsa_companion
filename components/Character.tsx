@@ -2,14 +2,14 @@ import {Image, ScrollView, StyleSheet, Text, TouchableOpacity, View} from "react
 import {useState} from "react";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
-
-import MetaField from "@/components/ui/MetaField";
 import {SafeAreaView} from "react-native-safe-area-context";
-import Talent from "@/components/ui/Talent";
 import {RawHero} from "@/constants/types/RawHero";
 import Attributes from "@/components/ui/Attributes";
 import Personal from "@/components/ui/Personal";
 import Talents from "@/components/ui/Talents";
+import {CharacterInGame} from "@/constants/types/CharacterInGame";
+import {useSQLiteContext} from "expo-sqlite";
+import {CalculatedAttributes, getCalculatedValues} from "@/constants/OptolithDatabase";
 
 const styles = StyleSheet.create({
     container: {
@@ -106,8 +106,14 @@ const styles = StyleSheet.create({
     }
 })
 
+//const getCharacterInGame = (db, characterData: RawHero) : CharacterInGame => {
+//
+//}
+
 const Character = () => {
+    const db = useSQLiteContext();
     const [characterData, setCharacterData] = useState<RawHero | null>(null);
+    const [calculatedAttributes, setCalculatedAttributes] = useState<CalculatedAttributes>()
     const [locale, setLocale] = useState<string>("de_de");
     const [error, setError] = useState<string | null>(null);
 
@@ -128,6 +134,7 @@ const Character = () => {
                 const jsonData = JSON.parse(fileContent);
                 // TODO validate json to be in the Optolith format
                 setCharacterData(jsonData);
+                setCalculatedAttributes(getCalculatedValues(db, jsonData));
                 setLocale((jsonData.locale?.replaceAll("-", "_") || "de_de").toLocaleLowerCase());
             } catch (parseError) {
                 // @ts-ignore
@@ -144,6 +151,7 @@ const Character = () => {
         setError(null);
         const data = require("../assets/data/robak.json");
         setCharacterData(data);
+        setCalculatedAttributes(getCalculatedValues(db, data));
         setLocale((data.locale?.replaceAll("-", "_") || "de_de").toLocaleLowerCase());
     }
 
@@ -157,7 +165,9 @@ const Character = () => {
                     <Image style={styles.avatar} source={{uri: characterData.avatar}} alt={"avatar"}/>}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Attributes</Text>
-                    <Attributes locale={locale} characterAttributes={characterData.attr.values} lp={characterData.attr.lp}  />
+                    <Attributes locale={locale}
+                                characterAttributes={characterData.attr.values}
+                                calculatedAttributes={calculatedAttributes} />
                 </View>
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Held</Text>
