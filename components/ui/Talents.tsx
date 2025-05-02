@@ -172,6 +172,7 @@ type AbilityCheck = {
     abilityValue: number;
     attributes: { id: string, name:string, value: number, diceValue: number, result: number }[];
     difficulty: number;
+    resultNumber: number;
     result: number;
 }
 
@@ -249,6 +250,7 @@ const Talents = (props: TalentProps) => {
                     abilityValue: item.value || 0,
                     attributes: attributes,
                     difficulty: 0,
+                    resultNumber: 0,
                     result: 0
                 }))
                 setModalVisible(true)
@@ -262,13 +264,13 @@ const Talents = (props: TalentProps) => {
                     </View>
                     <View style={styles.checks}>
                         <View style={[styles.check, {borderColor: AttributeColors.get(item.check1)}]}>
-                            <Text style={styles.checkValue}>{attrs?.get(item.check1).value}</Text>
+                            <Text style={styles.checkValue}>{attrs?.get(item.check1)?.value}</Text>
                         </View>
                         <View style={[styles.check, {borderColor: AttributeColors.get(item.check2)}]}>
-                            <Text style={styles.checkValue}>{attrs?.get(item.check2).value}</Text>
+                            <Text style={styles.checkValue}>{attrs?.get(item.check2)?.value}</Text>
                         </View>
                         <View style={[styles.check, {borderColor: AttributeColors.get(item.check3)}]}>
-                            <Text style={styles.checkValue}>{attrs?.get(item.check3).value}</Text>
+                            <Text style={styles.checkValue}>{attrs?.get(item.check3)?.value}</Text>
                         </View>
                     </View>
                 </View>
@@ -345,11 +347,11 @@ const Talents = (props: TalentProps) => {
             }
         })
 
-        let overallResult = (abilityCheck.abilityValue || 0)
+        const resultNumber = (abilityCheck.abilityValue || 0)
             - attributes.map(({result}) => result).reduce((a, b) => a + b, 0)
         ;
 
-        overallResult = overallResult / 3;
+        let overallResult = resultNumber / 3;
         overallResult = overallResult < 0 ? -1 : Math.ceil(overallResult);
         overallResult = overallResult == 0 ? 1 : overallResult;
         overallResult = Math.min(6, overallResult);
@@ -357,6 +359,7 @@ const Talents = (props: TalentProps) => {
         return {
             ...abilityCheck,
             attributes: attributes,
+            resultNumber: resultNumber,
             result: overallResult
         }
     }
@@ -405,6 +408,9 @@ const Talents = (props: TalentProps) => {
                         )
                     })
                 }
+                <Text>
+                    {"= " + abilityCheck.resultNumber}
+                </Text>
                 <AntDesign name="arrowright" size={16} color="black"/>
                 <Text style={abilityCheck.result > 0 ? styles.checkSuccessText : styles.checkFailureText}>
                     {abilityCheck.result < 0 ? "Not passed" : "QS" + abilityCheck.result}
