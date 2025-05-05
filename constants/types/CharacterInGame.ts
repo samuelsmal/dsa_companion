@@ -1,28 +1,28 @@
+export interface Value {
+    max: number;
+    current: number;
+}
+
 export interface CharacterInGame {
     /**
      * A date in milliseconds with the `H_` prefix.
      */
-    id: string
+    id: string;
 
-    lp: {
-        max: number,
-        current: number
-    },
+    // Either the `dateModified` or `dateCreated` timestamp.
+    // Is used to recalculate the max values.
+    characterLastModifiedAt: string;
 
-    asp: {
-        max: number,
-        current: number
-    },
-
-    kp: {
-        max: number,
-        current: number
-    }
-
-    fatePoints: {
-        max: number,
-        current: number
-    }
+    lp: Value;
+    asp: Value;
+    kp: Value;
+    fatePoints: Value;
+    soulPower: Value;
+    toughness: Value;
+    dodge: Value;
+    initiative: Value;
+    velocity: Value;
+    woundThreshold: Value;
 
     belongings: {id: string, where: string }[]
 
@@ -32,4 +32,6 @@ export interface CharacterInGame {
         h: number,
         k: number,
     }
+
+    painLevel: number;
 }

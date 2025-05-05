@@ -4,7 +4,7 @@ import {useEffect, useState} from "react";
 import {RawHero} from "@/constants/types/RawHero";
 import {createSections, generateRandomInteger, groupBy} from "@/constants/HelperFunctions";
 import {AttributeColors, Colors} from "@/constants/Colors";
-import {AntDesign} from "@expo/vector-icons";
+import {AntDesign, MaterialIcons} from "@expo/vector-icons";
 import {getAttributeNames, getTalents} from "@/constants/OptolithDatabase";
 
 type TalentProps = {
@@ -68,10 +68,10 @@ const styles = StyleSheet.create({
         alignSelf: "center",
     },
     checkSuccess: {
-        borderColor: "green",
+        backgroundColor: "green",
     },
     checkFailure: {
-        borderColor: "red",
+        backgroundColor: "red",
     },
     sectionTitle: {
         fontSize: 18,
@@ -163,15 +163,33 @@ const styles = StyleSheet.create({
     },
     sectionHeader: {
         marginBottom: 5,
+    },
+    buttonModifyInc: {
+        backgroundColor: "black",
+        borderRadius: "50%",
+        borderWidth: 1,
+    },
+    buttonModifyDec: {
+        backgroundColor: "black",
+        borderRadius: "50%",
+        borderWidth: 1,
     }
 })
+
+type AbilityAttribute = {
+    id: string;
+    name: string;
+    value: number;
+    diceValue: number;
+    result: number
+}
 
 type AbilityCheck = {
     abilityId: string;
     abilityName: string;
     abilityType: string;
     abilityValue: number;
-    attributes: { id: string, name:string, value: number, diceValue: number, result: number }[];
+    attributes: AbilityAttribute[];
     difficulty: number;
     resultNumber: number;
     result: number;
@@ -181,7 +199,7 @@ const Talents = (props: TalentProps) => {
     const db = useSQLiteContext();
 
     const [talents, setTalents] = useState<Talent[]>([])
-    const [attrs, setAttrs] = useState<Map<string, {value:number, name:string}>>()
+    const [attrs, setAttrs] = useState<Map<string, { value: number, name: string }>>()
 
     const [modalVisible, setModalVisible] = useState<boolean>(false)
     const [abilityCheck, setAbilityCheck] = useState<AbilityCheck | null>(null)
@@ -190,9 +208,15 @@ const Talents = (props: TalentProps) => {
         async function setup() {
             const attributeNames = await getAttributeNames(db, props.locale);
 
-            setAttrs(new Map<string, {value: number, name: string}>(
-                props.characterAttributes.map(item =>
-                    [item.id, {value: item.value, name: attributeNames.get(item.id) || ""}])
+            setAttrs(new Map<string, { value: number, name: string }>(
+                props.characterAttributes.map(item => {
+                    // Super annoying type polymorphism
+                    if (item instanceof Array) {
+                        return [item[0], {value: item[1], name: attributeNames.get(item[0]) || ""}];
+                    } else {
+                        return [item.id, {value: item.value, name: attributeNames.get(item.id) || ""}];
+                    }
+                })
             ))
 
             const allTalents = await getTalents(db, props.locale);
@@ -247,63 +271,23 @@ const Talents = (props: TalentProps) => {
                         <Text style={styles.value}>{item.value}</Text>
                     </View>
                     <View style={styles.checks}>
-                        <View style={[styles.check, {borderColor: AttributeColors.get(item.check1)}]}>
-                            <Text style={styles.checkValue}>{attrs?.get(item.check1)?.value}</Text>
-                        </View>
-                        <View style={[styles.check, {borderColor: AttributeColors.get(item.check2)}]}>
-                            <Text style={styles.checkValue}>{attrs?.get(item.check2)?.value}</Text>
-                        </View>
-                        <View style={[styles.check, {borderColor: AttributeColors.get(item.check3)}]}>
-                            <Text style={styles.checkValue}>{attrs?.get(item.check3)?.value}</Text>
-                        </View>
+                        {
+                            [item.check1, item.check2, item.check3].map((checkId, index) => {
+                                return (
+                                    <View style={[styles.check, {backgroundColor: AttributeColors.get(checkId)?.main}]}
+                                          key={"talents__check__item__" + item.id + index}
+                                    >
+                                        <Text style={[styles.checkValue, {color: AttributeColors.get(checkId)?.text}]}>
+                                            {attrs?.get(item.check1)?.value}
+                                        </Text>
+                                    </View>
+                                )
+                            })
+                        }
                     </View>
                 </View>
             </Pressable>
         ))
-    }
-
-    const renderDices = () => {
-        return abilityCheck?.attributes.map(({id, diceValue}, index) => {
-            return <View style={[styles.modalBoxedNumber, {borderColor: AttributeColors.get(id)}]}
-                         key={"check__dice_" + index}>
-                <Text style={styles.modalBoxedNumberText}>
-                    {diceValue}
-                </Text>
-            </View>
-        })
-    }
-
-    const renderDifficulty = () => {
-        return abilityCheck?.attributes.map(({id, diceValue}, index) => {
-            return <View style={[styles.modalBoxedNumber, {borderColor: AttributeColors.get(id)}]}
-                         key={"check__difficulty_" + index}>
-                <Text style={styles.modalBoxedNumberText}>
-                    {abilityCheck?.difficulty}
-                </Text>
-            </View>
-        })
-    }
-
-    const renderAttributeNames = () => {
-        return abilityCheck?.attributes.map(({id, name}, index) => {
-            return <View style={[styles.modalBoxedNumber, {borderColor: AttributeColors.get(id)}]}
-                         key={"check__attribute_" + index}>
-                <Text style={styles.modalBoxedNumberText}>
-                    {name}
-                </Text>
-            </View>
-        })
-    }
-
-    const renderAttributes = () => {
-        return abilityCheck?.attributes.map(({id, value}, index) => {
-            return <View style={[styles.modalBoxedNumber, {borderColor: AttributeColors.get(id)}]}
-                         key={"check__attribute_" + index}>
-                <Text style={styles.modalBoxedNumberText}>
-                    {value}
-                </Text>
-            </View>
-        })
     }
 
     const modifyDifficulty = (operator: string) => {
@@ -348,11 +332,24 @@ const Talents = (props: TalentProps) => {
         }
     }
 
+    const renderElements = (fnName: string, fn: (abilityAttribute: AbilityAttribute) => string | number | undefined) => {
+        return abilityCheck?.attributes.map((attribute: AbilityAttribute, index) => {
+            return (
+                <View style={[styles.modalBoxedNumber, {backgroundColor: AttributeColors.get(attribute.id)?.main}]}
+                      key={"check__" + fnName + index}>
+                    <Text style={[styles.modalBoxedNumberText, {color: AttributeColors.get(attribute.id)?.text}]}>
+                        {fn(attribute)}
+                    </Text>
+                </View>
+            )
+        })
+    }
+
     const renderResults = () => {
         return abilityCheck?.attributes.map(({result}, index) => {
-            return <View style={[styles.modalBoxedNumber, result > 0 ? styles.checkFailure : styles.checkSuccess]}
+            return <View style={[styles.modalBoxedNumber, {backgroundColor: result >= 0 ? "green" : "red"}]}
                          key={"check__result_" + index}>
-                <Text style={styles.modalBoxedNumberText}>
+                <Text style={[styles.modalBoxedNumberText, {color: "white"}]}>
                     {result}
                 </Text>
             </View>
@@ -386,7 +383,7 @@ const Talents = (props: TalentProps) => {
                 {
                     abilityCheck.attributes.map(({id, result}, index) => {
                         return (
-                            <Text key={"explanation__" + index} style={{color: AttributeColors.get(id)}}>
+                            <Text key={"explanation__" + index} style={{color: AttributeColors.get(id)?.main}}>
                                 - {result}
                             </Text>
                         )
@@ -432,7 +429,7 @@ const Talents = (props: TalentProps) => {
                                 </Text>
                             </View>
                             <View style={styles.modalCheckNumbersValues}>
-                                {renderAttributeNames()}
+                                {renderElements("dice", (abilityAttribute: AbilityAttribute) => abilityAttribute.name)}
                             </View>
                         </View>
                         <View style={styles.modalCheckNumbers}>
@@ -442,7 +439,7 @@ const Talents = (props: TalentProps) => {
                                 </Text>
                             </View>
                             <View style={styles.modalCheckNumbersValues}>
-                                {renderAttributes()}
+                                {renderElements("dice", (abilityAttribute: AbilityAttribute) => abilityAttribute.value)}
                             </View>
                         </View>
                         <View style={styles.modalCheckNumbers}>
@@ -452,7 +449,7 @@ const Talents = (props: TalentProps) => {
                                 </Text>
                             </View>
                             <View style={styles.modalCheckNumbersValues}>
-                                {renderDices()}
+                                {renderElements("dice", (abilityAttribute: AbilityAttribute) => abilityAttribute.diceValue)}
                             </View>
                         </View>
                         <View style={styles.modalCheckNumbers}>
@@ -460,19 +457,19 @@ const Talents = (props: TalentProps) => {
                                 <Text style={styles.modalCheckNumbersTitleText}>
                                     Modifikation:
                                 </Text>
-                                <View style={{flexDirection: "row"}}>
+                                <View style={{flexDirection: "row", justifyContent: "center", columnGap: 10}}>
                                     <TouchableOpacity onPress={() => modifyDifficulty("inc")}
-                                                      style={styles.modalButtonDone}>
-                                        <AntDesign name="pluscircle" size={24} color="black"/>
+                                                      style={styles.buttonModifyInc}>
+                                        <MaterialIcons name="exposure-plus-1" size={24} color="white" />
                                     </TouchableOpacity>
                                     <TouchableOpacity onPress={() => modifyDifficulty("dec")}
-                                                      style={styles.modalButtonDone}>
-                                        <AntDesign name="minuscircle" size={24} color="black"/>
+                                                      style={styles.buttonModifyDec}>
+                                        <MaterialIcons name="exposure-minus-1" size={24} color="white" />
                                     </TouchableOpacity>
                                 </View>
                             </View>
                             <View style={[styles.modalCheckNumbersValues, {alignItems: "flex-start"}]}>
-                                {renderDifficulty()}
+                                {renderElements("dice", (abilityAttribute: AbilityAttribute) => abilityCheck?.difficulty)}
                             </View>
                         </View>
                         <View style={styles.modalCheckNumbers}>

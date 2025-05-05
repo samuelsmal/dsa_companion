@@ -47,6 +47,7 @@ function karma(groupId: number, subGroupId: number, characterAttributes: Map<str
     return 0
 }
 
+// The attributes calculated based on base values
 export interface CalculatedAttributes {
     maxLp: number;
     maxAsp: number;
@@ -57,6 +58,7 @@ export interface CalculatedAttributes {
     initiative: number;
     velocity: number;
     woundThreshold: number;
+    fatePoints: number;
 }
 
 export function getCalculatedValues(db: SQLiteDatabase, characterData: RawHero): CalculatedAttributes {
@@ -76,7 +78,7 @@ export function getCalculatedValues(db: SQLiteDatabase, characterData: RawHero):
     const attributeForLp: number = characterData.attr.values.find(item => item.id == "ATTR_7") || 0;
 
     // @ts-ignore
-    const maxLp = raceValues.lp + 2 * attributeForLp - characterData.attr.permanentLP.lost;
+    const maxLp = raceValues.lp + 2 * attributeForLp["value"] - characterData.attr.permanentLP.lost;
 
     const characterTypeGroup = db.getFirstSync<{groupId: number, subGroupId: number}>(
         "SELECT gr AS groupId, sgr AS subGroupId FROM univ__professions WHERE id = ?", characterData.p
@@ -103,6 +105,22 @@ export function getCalculatedValues(db: SQLiteDatabase, characterData: RawHero):
     // @ts-ignore
     const woundThreshold= Math.floor(characterAttributes.get("ATTR_7") / 2);
 
+    // Glück ADV_14
+    // Pech DISADV_31
+
+    // Either my export is wrong, or the schema in github is wrong
+    const luck = characterData.activatable["ADV_14"]
+        .map(item => item.tier || 0)
+        .reduce((acc, el) => el > acc ? el : acc, 0);
+
+    // @ts-ignore
+    const badLuck= characterData.activatable["DISADV_31"]
+        .map(item => item.tier || 0)
+        .reduce((acc, el) => el > acc ? el : acc, 0);
+
+    // @ts-ignore
+    const fatePoints = 3 + luck - badLuck;
+
     return {
         maxLp: maxLp,
         maxAsp: maxAsp,
@@ -113,6 +131,6 @@ export function getCalculatedValues(db: SQLiteDatabase, characterData: RawHero):
         initiative: initiative,
         velocity: velocity,
         woundThreshold: woundThreshold,
+        fatePoints: fatePoints,
     }
-
 }

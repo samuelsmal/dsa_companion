@@ -25,13 +25,13 @@ export const Colors = {
     }
 }
 
-export const AttributeColors: Map<string, string> = new Map([
-    ["ATTR_1", Colors.light.courage],
-    ["ATTR_2", Colors.light.sagacity],
-    ["ATTR_3", Colors.light.intuition],
-    ["ATTR_4", Colors.light.charisma],
-    ["ATTR_5", Colors.light.dexterity],
-    ["ATTR_6", Colors.light.agility],
-    ["ATTR_7", Colors.light.constitution],
-    ["ATTR_8", Colors.light.strength],
+export const AttributeColors: Map<string, {main: string, text: string}> = new Map([
+    ["ATTR_1", {main: Colors.light.courage,      text: "white"}],
+    ["ATTR_2", {main: Colors.light.sagacity,     text: "white"}],
+    ["ATTR_3", {main: Colors.light.intuition,    text: "black"}],
+    ["ATTR_4", {main: Colors.light.charisma,     text: "black"}],
+    ["ATTR_5", {main: Colors.light.dexterity,    text: "black"}],
+    ["ATTR_6", {main: Colors.light.agility,      text: "black"}],
+    ["ATTR_7", {main: Colors.light.constitution, text: "black"}],
+    ["ATTR_8", {main: Colors.light.strength,     text: "white"}],
 ])

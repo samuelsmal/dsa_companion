@@ -1,7 +1,9 @@
 {
   "name": "dsa-companion",
+  "description": "A helper tool for Das Schwarze Auge players during your in-game sessions",
+  "version": "0.1.0",
+  "license": "MIT",
   "main": "expo-router/entry",
-  "version": "1.0.0",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",

@@ -7,9 +7,9 @@ import {RawHero} from "@/constants/types/RawHero";
 import Attributes from "@/components/ui/Attributes";
 import Personal from "@/components/ui/Personal";
 import Talents from "@/components/ui/Talents";
-import {CharacterInGame} from "@/constants/types/CharacterInGame";
 import {useSQLiteContext} from "expo-sqlite";
-import {CalculatedAttributes, getCalculatedValues} from "@/constants/OptolithDatabase";
+import {CharacterInGame} from "@/constants/types/CharacterInGame";
+import {getCharacterInGame} from "@/constants/Storage";
 
 const styles = StyleSheet.create({
     container: {
@@ -66,8 +66,10 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     heroTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        backgroundColor: 'black',
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 5,
     },
     section: {
         marginBottom: 15,
@@ -93,9 +95,11 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
     },
+
     heroName: {
         fontSize: 24,
         fontWeight: 'bold',
+        color: 'white',
     },
     sectionBelongings: {
         flexDirection: 'column',
@@ -106,16 +110,40 @@ const styles = StyleSheet.create({
     }
 })
 
-//const getCharacterInGame = (db, characterData: RawHero) : CharacterInGame => {
-//
-//}
-
 const Character = () => {
     const db = useSQLiteContext();
     const [characterData, setCharacterData] = useState<RawHero | null>(null);
-    const [calculatedAttributes, setCalculatedAttributes] = useState<CalculatedAttributes>()
+    const [characterInGame, setCharacterInGame] = useState<CharacterInGame | null>(null);
     const [locale, setLocale] = useState<string>("de_de");
     const [error, setError] = useState<string | null>(null);
+
+    const modifyInGameAttribute = (attributeName: string, operation: string) => {
+        if (characterInGame !== null) {
+            if (operation === "inc") {
+                // TODO save this to storage as well
+                setCharacterInGame(cig => {
+                    // might not be the best code... but I am lazy
+                    let next = {...cig};
+                    next[attributeName] = {
+                        current: Math.min(cig[attributeName].max, cig[attributeName].current + 1),
+                        max: cig[attributeName].max
+                    };
+
+                    return next;
+                })
+            } else if (operation === "dec") {
+                setCharacterInGame(cig => {
+                    let next = {...cig};
+                    next[attributeName] = {
+                        current: Math.max(0, cig[attributeName].current - 1),
+                        max: cig[attributeName].max
+                    };
+
+                    return next;
+                })
+            }
+        }
+    }
 
     const loadCharacterFromPicker = async () => {
         try {
@@ -134,7 +162,7 @@ const Character = () => {
                 const jsonData = JSON.parse(fileContent);
                 // TODO validate json to be in the Optolith format
                 setCharacterData(jsonData);
-                setCalculatedAttributes(getCalculatedValues(db, jsonData));
+                setCharacterInGame(await getCharacterInGame(db, jsonData));
                 setLocale((jsonData.locale?.replaceAll("-", "_") || "de_de").toLocaleLowerCase());
             } catch (parseError) {
                 // @ts-ignore
@@ -151,7 +179,7 @@ const Character = () => {
         setError(null);
         const data = require("../assets/data/robak.json");
         setCharacterData(data);
-        setCalculatedAttributes(getCalculatedValues(db, data));
+        setCharacterInGame(await getCharacterInGame(db, data));
         setLocale((data.locale?.replaceAll("-", "_") || "de_de").toLocaleLowerCase());
     }
 
@@ -160,14 +188,20 @@ const Character = () => {
 
         return (
             <View>
-                <Text style={styles.heroName}>{characterData.name}</Text>
-                {characterData.avatar &&
-                    <Image style={styles.avatar} source={{uri: characterData.avatar}} alt={"avatar"}/>}
+                <View style={styles.heroTitle}>
+                    <View style={{flexGrow: 1}}>
+                        <Text style={styles.heroName}>{characterData.name}</Text>
+                    </View>
+                    {characterData.avatar &&
+                        <Image style={styles.avatar} source={{uri: characterData.avatar}} alt={"avatar"}/>}
+                </View>
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Attributes</Text>
+                    <Text style={styles.sectionTitle}>Attribute</Text>
                     <Attributes locale={locale}
                                 characterAttributes={characterData.attr.values}
-                                calculatedAttributes={calculatedAttributes} />
+                                characterInGame={characterInGame}
+                                onAttributeChange={modifyInGameAttribute}
+                    />
                 </View>
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Held</Text>
