@@ -1,14 +1,45 @@
 import {SQLiteDatabase} from "expo-sqlite";
 import {RawHero} from "@/constants/types/RawHero";
 
+export async function getSpells(db: SQLiteDatabase, locale: string) {
+    return db.getAllAsync<{
+        id: string,
+        check1: string,
+        check2: string,
+        check3: string,
+        gr: number,
+        spellName: string,
+        groupName: string,
+        effect: string,
+        aeCost: string,
+        range: string,
+        castingTime: string,
+        duration: string,
+        target: string,
+    }>(
+        "SELECT US.id, US.check1, US.check2, US.check3, US.gr, LS.name AS spellName, LSG.name AS groupName, " +
+        " LS.effect AS effect, LS.aeCostShort AS aeCost, LS.range AS range, " +
+        " LS.castingTimeShort as castingTime, LS.duration AS duration, LS.target AS target" +
+        " FROM univ__spells AS US " +
+        " INNER JOIN " + locale + "__spells AS LS ON US.id = LS.id" +
+        " INNER JOIN " + locale + "__spell_groups AS LSG ON US.gr = LSG.id"
+    );
+}
+
+
 export async function getAttributeNames(db: SQLiteDatabase, locale: string) {
     const attributeNames = await db.getAllAsync<{ id: string, name: string }>(
-        "SELECT id, short as name FROM '" + locale + "__attributes' ORDER BY id"
+        "SELECT id, short AS name FROM '" + locale + "__attributes' ORDER BY id"
     );
 
     return new Map(attributeNames.map(item => [item.id, item.name]));
 }
 
+/**
+ * Fetches the all talents, the name, the group and the attribute check ids
+ * @param db
+ * @param locale
+ */
 export async function getTalents(db: SQLiteDatabase, locale: string) {
     return db.getAllAsync<{
         id: string,
@@ -19,14 +50,17 @@ export async function getTalents(db: SQLiteDatabase, locale: string) {
         skillName: string,
         groupName: string
     }>(
-        "SELECT US.id, US.check1, US.check2, US.check3, US.gr, LS.name AS skillName, LSG.name AS groupName " +
+        "SELECT US.id, US.check1, US.check2, US.check3, US.gr, LS.name AS skillName, LSG.fullName AS groupName " +
         " FROM univ__skills AS US" +
         " INNER JOIN " + locale + "__skills AS LS ON US.id = LS.id" +
         " INNER JOIN " + locale + "__skill_groups AS LSG ON US.gr = LSG.id"
     );
 }
 
-function asp(groupId: number, subGroupId: number, characterAttributes: Map<string, number>, additionalAsp: number, permamentAE: {lost: number, redeemed: number}) {
+function asp(groupId: number, subGroupId: number, characterAttributes: Map<string, number>, additionalAsp: number, permamentAE: {
+    lost: number,
+    redeemed: number
+}) {
     // TODO do other groups
     if (groupId === 2) {
         let val = 20;
@@ -42,7 +76,10 @@ function asp(groupId: number, subGroupId: number, characterAttributes: Map<strin
     }
 }
 
-function karma(groupId: number, subGroupId: number, characterAttributes: Map<string, number>, additionalAsp: number, permamentKP: {lost: number, redeemed: number}) {
+function karma(groupId: number, subGroupId: number, characterAttributes: Map<string, number>, additionalAsp: number, permamentKP: {
+    lost: number,
+    redeemed: number
+}) {
     // TODO
     return 0
 }
@@ -62,11 +99,11 @@ export interface CalculatedAttributes {
 }
 
 export function getCalculatedValues(db: SQLiteDatabase, characterData: RawHero): CalculatedAttributes {
-    const raceValues = db.getFirstSync<{lp: number, spi: number, tou: number, mov: number}>(
+    const raceValues = db.getFirstSync<{ lp: number, spi: number, tou: number, mov: number }>(
         "SELECT lp, spi, tou, mov FROM univ__races WHERE id = ?", characterData.r
     );
 
-    const characterAttributes = new Map<string, number>(characterData.attr.values.map(item=> {
+    const characterAttributes = new Map<string, number>(characterData.attr.values.map(item => {
         if (item instanceof Array) {
             return [item[0], item[1]];
         } else {
@@ -80,12 +117,12 @@ export function getCalculatedValues(db: SQLiteDatabase, characterData: RawHero):
     // @ts-ignore
     const maxLp = raceValues.lp + 2 * attributeForLp["value"] - characterData.attr.permanentLP.lost;
 
-    const characterTypeGroup = db.getFirstSync<{groupId: number, subGroupId: number}>(
+    const characterTypeGroup = db.getFirstSync<{ groupId: number, subGroupId: number }>(
         "SELECT gr AS groupId, sgr AS subGroupId FROM univ__professions WHERE id = ?", characterData.p
     );
 
-    const maxAsp = characterTypeGroup ? asp(characterTypeGroup.groupId, characterTypeGroup.subGroupId, characterAttributes, characterData.attr.ae, characterData.attr.permanentAE)  : 0;
-    const maxKarma = characterTypeGroup ? karma(characterTypeGroup.groupId, characterTypeGroup.subGroupId, characterAttributes, characterData.attr.kp, characterData.attr.permanentKP)  : 0;
+    const maxAsp = characterTypeGroup ? asp(characterTypeGroup.groupId, characterTypeGroup.subGroupId, characterAttributes, characterData.attr.ae, characterData.attr.permanentAE) : 0;
+    const maxKarma = characterTypeGroup ? karma(characterTypeGroup.groupId, characterTypeGroup.subGroupId, characterAttributes, characterData.attr.kp, characterData.attr.permanentKP) : 0;
 
     // @ts-ignore
     const soulPower = raceValues.spi + Math.floor((characterAttributes.get("ATTR_1") + characterAttributes.get("ATTR_2") + characterAttributes.get("ATTR_3")) / 6);
@@ -100,10 +137,10 @@ export function getCalculatedValues(db: SQLiteDatabase, characterData: RawHero):
     const initiative = Math.floor((characterAttributes.get("ATTR_1") + characterAttributes.get("ATTR_6")) / 2);
 
     // @ts-ignore
-    const velocity= raceValues.mov;
+    const velocity = raceValues.mov;
 
     // @ts-ignore
-    const woundThreshold= Math.floor(characterAttributes.get("ATTR_7") / 2);
+    const woundThreshold = Math.floor(characterAttributes.get("ATTR_7") / 2);
 
     // Glück ADV_14
     // Pech DISADV_31
@@ -114,7 +151,7 @@ export function getCalculatedValues(db: SQLiteDatabase, characterData: RawHero):
         .reduce((acc, el) => el > acc ? el : acc, 0);
 
     // @ts-ignore
-    const badLuck= characterData.activatable["DISADV_31"]
+    const badLuck = characterData.activatable["DISADV_31"]
         .map(item => item.tier || 0)
         .reduce((acc, el) => el > acc ? el : acc, 0);
 

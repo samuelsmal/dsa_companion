@@ -1,16 +1,17 @@
-import {StyleSheet, Text, TouchableOpacity, View} from "react-native";
+import {StyleSheet, Text, TouchableOpacity, useWindowDimensions, View} from "react-native";
 import {useSQLiteContext} from "expo-sqlite";
 import {useEffect, useState} from "react";
 import {AttributeColors} from "@/constants/Colors";
-import {CalculatedAttributes} from "@/constants/OptolithDatabase";
 import {CharacterInGame} from "@/constants/types/CharacterInGame";
-import {AntDesign, MaterialIcons} from "@expo/vector-icons";
+import {MaterialIcons} from "@expo/vector-icons";
+import {Sizes} from "@/constants/Sizes";
 
 type AttributesProps = {
     locale: string;
     characterAttributes: { id: string, value: number }[]
     characterInGame: CharacterInGame | null,
     onAttributeChange: (attributeName: string, operation: string) => void,
+    onPurseChange: (coinType: string, operation: string) => void,
 }
 
 type Attribute = {
@@ -23,14 +24,14 @@ const styles = StyleSheet.create({
     container: {
         padding: 2,
         flexDirection: "column",
-        rowGap: 5
+        rowGap: Sizes.rowGap,
     },
     name: {
-        fontSize: 8,
+        fontSize: Sizes.attributeName,
         textAlign: "center"
     },
     value: {
-        fontSize: 16,
+        fontSize: Sizes.attributeValue,
         textAlign: "center"
     },
     item: {
@@ -44,12 +45,17 @@ const styles = StyleSheet.create({
     },
     row: {
         flexDirection: "row",
-        justifyContent: 'flex-start',
+        justifyContent: "center",
         flexWrap: 'wrap',
-        columnGap: 5,
+        columnGap: Sizes.columnGap,
+        rowGap: Sizes.rowGap,
     },
-    modifableAttribute: {
+    modifiableAttribute: {
         width: 80
+    },
+    headerTitle: {
+        fontSize: 16,
+        fontWeight: "bold",
     }
 })
 
@@ -68,7 +74,41 @@ const CalculatedAttributeTitles = new Map<string, string>([
 
 const renderModifiableAttribute = (name: string, currentValue: number, maxValue: number, modFn: (attributeName: string, operation: string) => void) => {
     return (
-        <View style={[styles.item, styles.modifableAttribute]}>
+        <View style={[styles.item, styles.modifiableAttribute]}>
+            <View style={{flexGrow: 1}}>
+                <TouchableOpacity onPress={() => modFn(name, "inc")}
+                                  style={{flexGrow: 1, alignItems: "center", backgroundColor: "black"}}>
+                    <MaterialIcons name="exposure-plus-1" size={Sizes.buttonIconInteraction} color="white"/>
+                </TouchableOpacity>
+            </View>
+            <View style={[styles.innerItemBox, {flexGrow: 1, alignItems: "center", justifyContent: "space-evenly"}]}>
+                <Text style={styles.name}>{CalculatedAttributeTitles.get(name)}</Text>
+                <View style={{flexDirection: "row", alignItems: "baseline"}}>
+                    <Text style={styles.value}>{currentValue}</Text>
+                    <Text style={[styles.value, {fontSize: Sizes.attributeName}]}>/</Text>
+                    <Text style={[styles.value, {fontSize: Sizes.attributeName}]}>{maxValue}</Text>
+                </View>
+            </View>
+            <View style={{flexGrow: 1}}>
+                <TouchableOpacity onPress={() => modFn(name, "dec")}
+                                  style={{flexGrow: 1, alignItems: "center", backgroundColor: "black"}}>
+                    <MaterialIcons name="exposure-minus-1" size={Sizes.buttonIconInteraction} color="white"/>
+                </TouchableOpacity>
+            </View>
+        </View>
+    )
+}
+
+const CoinTypeHuman = new Map<string, string>([
+    ["d", "Dukate"],
+    ["s", "Silber"],
+    ["h", "Heller"],
+    ["k", "Kreuzer"],
+])
+
+const renderPurseCoin = (name: string, currentValue: number, modFn: (attributeName: string, operation: string) => void) => {
+    return (
+        <View style={[styles.item, styles.modifiableAttribute]}>
             <View style={{flexGrow: 1}}>
                 <TouchableOpacity onPress={() => modFn(name, "inc")}
                                   style={{flexGrow: 1, alignItems: "center", backgroundColor: "black"}}>
@@ -76,11 +116,9 @@ const renderModifiableAttribute = (name: string, currentValue: number, maxValue:
                 </TouchableOpacity>
             </View>
             <View style={[styles.innerItemBox, {flexGrow: 1, alignItems: "center"}]}>
-                <Text style={styles.name}>{CalculatedAttributeTitles.get(name)}</Text>
-                <View style={{flexDirection: "row"}}>
+                <Text style={styles.name}>{CoinTypeHuman.get(name)}</Text>
+                <View style={{flexDirection: "row", alignItems: "center"}}>
                     <Text style={styles.value}>{currentValue}</Text>
-                    <Text style={styles.value}>/</Text>
-                    <Text style={styles.value}>{maxValue}</Text>
                 </View>
             </View>
             <View style={{flexGrow: 1}}>
@@ -93,10 +131,15 @@ const renderModifiableAttribute = (name: string, currentValue: number, maxValue:
     )
 }
 
+const attributeWrapperWidth = (windowWidth: number, itemWidth: number, minItemsPerLine: number = 4): number => {
+    return Math.max(Math.floor(windowWidth / minItemsPerLine) - Sizes.columnGap * (minItemsPerLine - 1), itemWidth)
+}
+
 const Attributes = (props: AttributesProps) => {
     const db = useSQLiteContext();
 
     const [attrs, setAttrs] = useState<Attribute[]>([])
+    const {height, width} = useWindowDimensions();
 
     useEffect(() => {
         async function setup() {
@@ -118,7 +161,7 @@ const Attributes = (props: AttributesProps) => {
             <View style={styles.row}>
                 {
                     attrs.map((attr, index) => (
-                        <View style={[styles.item, {backgroundColor: AttributeColors.get(attr.id)?.main}]}
+                        <View style={[styles.item, {backgroundColor: AttributeColors.get(attr.id)?.main, width: attributeWrapperWidth(width, 10)}]}
                               key={"attr_" + index.toString()}>
                             <View style={styles.innerItemBox}>
                                 <Text
@@ -130,11 +173,25 @@ const Attributes = (props: AttributesProps) => {
                     ))
                 }
             </View>
+
             {props.characterInGame &&
                 <View style={styles.row}>
-
+                    {
+                        ["soulPower", "toughness", "dodge", "initiative", "velocity", "woundThreshold"].map((attr, index) => (
+                            <View style={styles.item}
+                                  key={"calc__attr_" + index.toString()}>
+                                <View style={styles.innerItemBox}>
+                                    <Text
+                                        style={styles.name}>{CalculatedAttributeTitles.get(attr)}</Text>
+                                    <Text
+                                        style={styles.value}>{props.characterInGame[attr].current}</Text>
+                                </View>
+                            </View>
+                        ))
+                    }
                 </View>
             }
+
             {props.characterInGame &&
                 <View style={styles.row}>
                     {renderModifiableAttribute(
@@ -162,8 +219,16 @@ const Attributes = (props: AttributesProps) => {
 
             {props.characterInGame &&
                 <View style={styles.row}>
-
-
+                    <View style={styles.row}>
+                        {
+                            ["d", "s", "h", "k"].map(coinType => (
+                                renderPurseCoin(
+                                    coinType,
+                                    props.characterInGame?.purse[coinType],
+                                    props.onPurseChange)
+                            ))
+                        }
+                    </View>
                 </View>
             }
         </View>

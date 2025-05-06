@@ -1,6 +1,7 @@
 import {StyleSheet, Text, View} from "react-native";
 import {useSQLiteContext} from "expo-sqlite";
 import {RawHero} from "@/constants/types/RawHero";
+import {Sizes} from "@/constants/Sizes";
 
 type PersonalProps = {
     locale: string;
@@ -22,10 +23,10 @@ const styles = StyleSheet.create({
         flexWrap: "wrap",
     },
     name: {
-        fontSize: 8,
+        fontSize: Sizes.attributeName,
     },
     value: {
-        fontSize: 16,
+        fontSize: Sizes.attributeValue,
     },
     item: {
         padding: 5

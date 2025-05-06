@@ -5,16 +5,18 @@ import {RawHero} from "@/constants/types/RawHero";
 import {createSections, generateRandomInteger, groupBy} from "@/constants/HelperFunctions";
 import {AttributeColors, Colors} from "@/constants/Colors";
 import {AntDesign, MaterialIcons} from "@expo/vector-icons";
-import {getAttributeNames, getTalents} from "@/constants/OptolithDatabase";
+import {getAttributeNames, getSpells} from "@/constants/OptolithDatabase";
 import {Sizes} from "@/constants/Sizes";
+import {CharacterInGame} from "@/constants/types/CharacterInGame";
 
-type TalentProps = {
+type SpellProps = {
     locale: string;
-    characterTalents: RawHero["talents"];
+    characterSpells: RawHero["spells"];
     characterAttributes: RawHero["attr"]["values"];
+    characterInGame: CharacterInGame;
 }
 
-type Talent = {
+type Spell = {
     id: string
     name: string
     check1: string,
@@ -23,6 +25,12 @@ type Talent = {
     value: number | undefined
     group: number
     groupName: string
+    effect: string
+    castingTime: string
+    aeCost: string
+    range: string
+    duration: string
+    target: string
 }
 
 const styles = StyleSheet.create({
@@ -47,8 +55,6 @@ const styles = StyleSheet.create({
     },
     item: {
         flexDirection: "row",
-        columnGap: 5,
-        alignContent: "center",
         alignItems: "baseline",
     },
     itemName: {
@@ -205,13 +211,17 @@ type AbilityCheck = {
     result: number;
 }
 
-const Talents = (props: TalentProps) => {
+const Spells = (props: SpellProps) => {
     const db = useSQLiteContext();
 
-    const [talents, setTalents] = useState<Talent[]>([])
+    const [spells, setSpells] = useState<Spell[]>([])
     const [attrs, setAttrs] = useState<Map<string, { value: number, name: string }>>()
 
-    const [modalVisible, setModalVisible] = useState<boolean>(false)
+    const [checkModalVisible, setCheckModalVisible] = useState<boolean>(false)
+    const [infoModal, setInfoModal] = useState<{ isVisible: boolean, spellOfInterest: Spell | null }>({
+        isVisible: false,
+        spellOfInterest: null
+    })
     const [abilityCheck, setAbilityCheck] = useState<AbilityCheck | null>(null)
 
     useEffect(() => {
@@ -229,64 +239,79 @@ const Talents = (props: TalentProps) => {
                 })
             ))
 
-            const allTalents = await getTalents(db, props.locale);
+            const allSpells = await getSpells(db, props.locale);
+            const spells = new Map(allSpells.map(spell => [spell.id, spell]))
 
-            const givenTalents = new Map<string, number>(
-                Object.keys(props.characterTalents).map(k => [k, props.characterTalents[k]]));
+            const givenSpells = Object.keys(props.characterSpells).map(k => ({
+                id: k,
+                name: spells.get(k)?.spellName,
+                check1: spells.get(k)?.check1,
+                check2: spells.get(k)?.check2,
+                check3: spells.get(k)?.check3,
+                group: spells.get(k)?.gr,
+                groupName: spells.get(k)?.groupName,
+                effect: spells.get(k)?.effect,
+                castingTime: spells.get(k)?.castingTime,
+                aeCost: spells.get(k)?.aeCost,
+                range: spells.get(k)?.range,
+                duration: spells.get(k)?.duration,
+                target: spells.get(k)?.target,
+                value: props.characterSpells[k]
+            }));
 
-            setTalents(allTalents.map(val => ({
-                id: val.id,
-                name: val.skillName,
-                check1: val.check1,
-                check2: val.check2,
-                check3: val.check3,
-                group: val.gr,
-                groupName: val.groupName,
-                value: givenTalents.get(val.id) || 0,
-            })))
-
+            setSpells(givenSpells);
         }
 
         setup();
     }, [])
 
-    const renderItems = (items: Talent[]) => {
-        return items.map((item: Talent) => (
-            <Pressable key={"pressable_" + item.id} onPress={() => {
-                const attributes = [item.check1, item.check2, item.check3]
-                    .map(checkId => ({
-                        id: checkId,
-                        name: attrs?.get(checkId)?.name || "",
-                        value: attrs?.get(checkId)?.value || 0,
-                        diceValue: generateRandomInteger(),
+    const renderItems = (items: Spell[]) => {
+        return items.map((item: Spell) => (
+            <View style={styles.item} key={"spell__" + item.id}>
+                <Pressable style={{flexDirection: "row", borderColor: "red", borderWidth: 1, flexGrow: 1}} key={"pressable__spell__info__" + item.id}
+                           onPress={() => {
+                               setInfoModal({
+                                   isVisible: true,
+                                   spellOfInterest: item,
+                               })
+                           }}>
+                    <View style={{flexDirection: "row",borderColor: "blue", borderWidth: 1}}>
+                        <View>
+                            <Text style={styles.name}>{item.name}</Text>
+                        </View>
+                        <View>
+                            <Text style={styles.value}>{item.value}</Text>
+                        </View>
+                    </View>
+                </Pressable>
+                <Pressable style={{borderColor: "green", borderWidth: 1}} key={"pressable__spell__check__" + item.id} onPress={() => {
+                    const attributes = [item.check1, item.check2, item.check3]
+                        .map(checkId => ({
+                            id: checkId,
+                            name: attrs?.get(checkId)?.name || "",
+                            value: attrs?.get(checkId)?.value || 0,
+                            diceValue: generateRandomInteger(),
+                            result: 0
+                        }))
+
+                    setAbilityCheck(calculateResult({
+                        abilityId: item.id,
+                        abilityName: item.name,
+                        abilityType: "SPELL",
+                        abilityValue: item.value || 0,
+                        attributes: attributes,
+                        difficulty: 0,
+                        resultNumber: 0,
                         result: 0
                     }))
-
-                setAbilityCheck(calculateResult({
-                    abilityId: item.id,
-                    abilityName: item.name,
-                    abilityType: "TALENT",
-                    abilityValue: item.value || 0,
-                    attributes: attributes,
-                    difficulty: 0,
-                    resultNumber: 0,
-                    result: 0
-                }))
-                setModalVisible(true)
-            }}>
-                <View style={styles.item} key={item.id}>
-                    <View style={styles.itemName}>
-                        <Text style={styles.name}>{item.name}</Text>
-                    </View>
-                    <View style={styles.itemValue}>
-                        <Text style={styles.value}>{item.value}</Text>
-                    </View>
+                    setCheckModalVisible(true)
+                }}>
                     <View style={styles.checks}>
                         {
                             [item.check1, item.check2, item.check3].map((checkId, index) => {
                                 return (
                                     <View style={[styles.check, {backgroundColor: AttributeColors.get(checkId)?.main}]}
-                                          key={"talents__check__item__" + item.id + index}
+                                          key={"spells__check__item__" + item.id + index}
                                     >
                                         <Text style={[styles.checkValue, {color: AttributeColors.get(checkId)?.text}]}>
                                             {attrs?.get(item.check1)?.value}
@@ -296,8 +321,9 @@ const Talents = (props: TalentProps) => {
                             })
                         }
                     </View>
-                </View>
-            </Pressable>
+
+                </Pressable>
+            </View>
         ))
     }
 
@@ -394,7 +420,8 @@ const Talents = (props: TalentProps) => {
                 {
                     abilityCheck.attributes.map(({id, result}, index) => {
                         return (
-                            <Text key={"explanation__" + index} style={{fontSize: Sizes.attributeValue, color: AttributeColors.get(id)?.main}}>
+                            <Text key={"explanation__" + index}
+                                  style={{fontSize: Sizes.attributeValue, color: AttributeColors.get(id)?.main}}>
                                 - {result}
                             </Text>
                         )
@@ -404,11 +431,55 @@ const Talents = (props: TalentProps) => {
                     {"= " + abilityCheck.resultNumber}
                 </Text>
                 <AntDesign name="arrowright" size={Sizes.attributeValue} color="black"/>
-                <Text style={[{fontSize: Sizes.attributeValue}, abilityCheck.result > 0 ? styles.checkSuccessText : styles.checkFailureText]}>
-                    {abilityCheck.result < 0 ? "Not passed" : "QS" + abilityCheck.result}
+                <Text
+                    style={[{fontSize: Sizes.attributeValue}, abilityCheck.result > 0 ? styles.checkSuccessText : styles.checkFailureText]}>
+                    {abilityCheck.result < 0 ? "Nicht bestanden!" : "QS" + abilityCheck.result}
                 </Text>
             </View>
         )
+    }
+    const renderInfoModal = () => {
+        if (infoModal.spellOfInterest !== null) {
+            return (
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalInnerContainer}>
+                        <View style={styles.modalTitle}>
+                            <View>
+                                <Text style={styles.modalTitleText}>{infoModal.spellOfInterest.name}</Text>
+                            </View>
+                        </View>
+                        <View style={{flexDirection: "column"}}>
+                            <View>
+                                <Text>Kosten:</Text>
+                                <Text>{infoModal.spellOfInterest.aeCost}</Text>
+                            </View>
+                            <View>
+                                <Text>Zauberdauer:</Text>
+                                <Text>{infoModal.spellOfInterest.duration}</Text>
+                            </View>
+                            <View>
+                                <Text>Reichweite:</Text>
+                                <Text>{infoModal.spellOfInterest.range}</Text>
+                            </View>
+                            <View>
+                                <Text>Wirkungsdauer:</Text>
+                                <Text>{infoModal.spellOfInterest.duration}</Text>
+                            </View>
+                            <View>
+                                <Text>Effekt:</Text>
+                                <Text>{infoModal.spellOfInterest.effect}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.modalButton}>
+                            <TouchableOpacity onPress={() => setInfoModal({isVisible: false, spellOfInterest: null})}
+                                              style={styles.modalButtonDone}>
+                                <AntDesign name="checkcircle" size={24} color="black"/>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            )
+        }
     }
 
     const renderCheckModal = () => {
@@ -471,11 +542,11 @@ const Talents = (props: TalentProps) => {
                                 <View style={{flexDirection: "row", justifyContent: "center", columnGap: 10}}>
                                     <TouchableOpacity onPress={() => modifyDifficulty("inc")}
                                                       style={styles.buttonModifyInc}>
-                                        <MaterialIcons name="exposure-plus-1" size={24} color="white" />
+                                        <MaterialIcons name="exposure-plus-1" size={24} color="white"/>
                                     </TouchableOpacity>
                                     <TouchableOpacity onPress={() => modifyDifficulty("dec")}
                                                       style={styles.buttonModifyDec}>
-                                        <MaterialIcons name="exposure-minus-1" size={24} color="white" />
+                                        <MaterialIcons name="exposure-minus-1" size={24} color="white"/>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -498,7 +569,7 @@ const Talents = (props: TalentProps) => {
                         {renderOverallResult()}
                     </View>
                     <View style={styles.modalButton}>
-                        <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalButtonDone}>
+                        <TouchableOpacity onPress={() => setCheckModalVisible(false)} style={styles.modalButtonDone}>
                             <AntDesign name="checkcircle" size={24} color="black"/>
                         </TouchableOpacity>
                     </View>
@@ -510,14 +581,21 @@ const Talents = (props: TalentProps) => {
     return (
         <View style={styles.container}>
             <Modal
-                visible={modalVisible}
+                visible={checkModalVisible}
                 transparent={true}
-                onRequestClose={() => setModalVisible(false)}
+                onRequestClose={() => setCheckModalVisible(false)}
             >
                 {renderCheckModal()}
             </Modal>
+            <Modal
+                visible={infoModal.isVisible}
+                transparent={true}
+                onRequestClose={() => setInfoModal({isVisible: false, spellOfInterest: null})}
+            >
+                {renderInfoModal()}
+            </Modal>
             <View style={styles.sectionContainer}>
-                {createSections(groupBy(talents, ({groupName}) => groupName)).map(({title, data}) => (
+                {createSections(groupBy(spells, ({groupName}) => groupName)).map(({title, data}) => (
                     <View>
                         <View style={styles.sectionHeader} key={"title_" + title}>
                             <Text style={styles.sectionTitle}>{title}</Text>
@@ -530,4 +608,4 @@ const Talents = (props: TalentProps) => {
     )
 }
 
-export default Talents
+export default Spells

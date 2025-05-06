@@ -10,6 +10,9 @@ import Talents from "@/components/ui/Talents";
 import {useSQLiteContext} from "expo-sqlite";
 import {CharacterInGame} from "@/constants/types/CharacterInGame";
 import {getCharacterInGame} from "@/constants/Storage";
+import {Sizes} from "@/constants/Sizes";
+import LinedText from "@/components/ui/LineText";
+import Spells from "@/components/ui/Spells";
 
 const styles = StyleSheet.create({
     container: {
@@ -83,7 +86,7 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: Sizes.sectionTitle,
         fontWeight: 'bold',
         marginBottom: 10,
     },
@@ -145,6 +148,40 @@ const Character = () => {
         }
     }
 
+    const modifyPurse = (coinType: string, operation: string) => {
+        if (characterInGame !== null) {
+            if (operation === "inc") {
+                setCharacterInGame(cig => {
+                        let newPurse = cig?.purse
+
+                        if (newPurse) {
+                            newPurse[coinType] = Math.max(0, newPurse[coinType] + 1)
+                        }
+
+                        return {
+                            ...cig,
+                            purse: newPurse
+                        }
+                    }
+                )
+            } else if (operation === "dec") {
+                setCharacterInGame(cig => {
+                        let newPurse = cig?.purse
+
+                        if (newPurse) {
+                            newPurse[coinType] = Math.max(0, newPurse[coinType] - 1)
+                        }
+
+                        return {
+                            ...cig,
+                            purse: newPurse
+                        }
+                    }
+                )
+            }
+        }
+    }
+
     const loadCharacterFromPicker = async () => {
         try {
             const result = await DocumentPicker.getDocumentAsync({
@@ -196,15 +233,16 @@ const Character = () => {
                         <Image style={styles.avatar} source={{uri: characterData.avatar}} alt={"avatar"}/>}
                 </View>
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Attribute</Text>
+                    <LinedText text={"Attribute"}/>
                     <Attributes locale={locale}
                                 characterAttributes={characterData.attr.values}
                                 characterInGame={characterInGame}
                                 onAttributeChange={modifyInGameAttribute}
+                                onPurseChange={modifyPurse}
                     />
                 </View>
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Held</Text>
+                    <LinedText text={"Persönliche Daten"}/>
                     <View style={styles.sectionContent}>
                         <Personal locale={locale} personal={characterData.pers}
                                   name={characterData.name}
@@ -220,7 +258,28 @@ const Character = () => {
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Talente</Text>
+                    <LinedText text={"Vorteile"}/>
+                    <View style={styles.sectionContent}>
+                        <Text>TODO</Text>
+                    </View>
+                </View>
+
+                <View style={styles.section}>
+                    <LinedText text={"Nachteile"}/>
+                    <View style={styles.sectionContent}>
+                        <Text>TODO</Text>
+                    </View>
+                </View>
+
+                <View style={styles.section}>
+                    <LinedText text={"Allgemeine Sonderfertigkeiten"}/>
+                    <View style={styles.sectionContent}>
+                        <Text>TODO</Text>
+                    </View>
+                </View>
+
+                <View style={styles.section}>
+                    <LinedText text={"Talente"}/>
                     <View style={styles.sectionContent}>
                         <Talents locale={locale}
                                  characterTalents={characterData.talents}
@@ -228,29 +287,29 @@ const Character = () => {
                     </View>
                 </View>
 
+                {
+                    characterInGame && characterInGame.asp.max > 0 && (
+                        <View style={styles.section}>
+                            <LinedText text={"Zauber & Rituale"}/>
+                            <View style={styles.sectionContent}>
+                                <Spells locale={locale}
+                                        characterSpells={characterData.spells}
+                                        characterAttributes={characterData.attr.values}
+                                        characterInGame={characterInGame}
+                                />
+                            </View>
+                        </View>
+                    )
+                }
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Vorteile</Text>
+                    <LinedText text={"Allgemeine Sonderfertigkeiten"}/>
                     <View style={styles.sectionContent}>
                         <Text>TODO</Text>
                     </View>
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Nachteile</Text>
-                    <View style={styles.sectionContent}>
-                        <Text>TODO</Text>
-                    </View>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Allgemeine Sonderfertigkeiten</Text>
-                    <View style={styles.sectionContent}>
-                        <Text>TODO</Text>
-                    </View>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Ausrüstung</Text>
+                    <LinedText text={"Ausrüstung"}/>
                     <View style={styles.sectionBelongings}>
                         {
                             Object.keys(characterData.belongings.items).map((key: string, index: number) => (
