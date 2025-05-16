@@ -1,6 +1,20 @@
 import {SQLiteDatabase} from "expo-sqlite";
 import {RawHero} from "@/constants/types/RawHero";
 
+export function getCantrips(db: SQLiteDatabase, locale: string, characterCantripIds: string[]) {
+    return db.getAllAsync<{
+        id: string,
+        name: string,
+        effect: string,
+        range: string,
+        duration: string,
+        target: string,
+    }>("SELECT id, name, effect, range, duration, target" +
+    " FROM " + locale + "__cantrips " +
+    " WHERE id in (" + characterCantripIds.map(x => "'" + x +"'").join(",") + ")");
+}
+
+
 export async function getSpells(db: SQLiteDatabase, locale: string) {
     return db.getAllAsync<{
         id: string,

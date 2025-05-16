@@ -13,6 +13,9 @@ import {getCharacterInGame} from "@/constants/Storage";
 import {Sizes} from "@/constants/Sizes";
 import LinedText from "@/components/ui/LineText";
 import Spells from "@/components/ui/Spells";
+import Vantages from "@/components/ui/Vantages";
+import {t} from "@/constants/Translate";
+import Cantrips from "@/components/ui/Cantrips";
 
 const styles = StyleSheet.create({
     container: {
@@ -260,7 +263,7 @@ const Character = () => {
                 <View style={styles.section}>
                     <LinedText text={"Vorteile"}/>
                     <View style={styles.sectionContent}>
-                        <Text>TODO</Text>
+                        <Vantages locale={locale} characterVantages={characterData.activatable}/>
                     </View>
                 </View>
 
@@ -301,6 +304,20 @@ const Character = () => {
                         </View>
                     )
                 }
+
+                {
+                    characterData && characterData.cantrips.length > 0 && (
+                        <View style={styles.section}>
+                            <LinedText text={t.get("cantrips")}/>
+                            <View style={styles.sectionContent}>
+                                <Cantrips locale={locale}
+                                          characterCantrips={characterData.cantrips}
+                                />
+                            </View>
+                        </View>
+                    )
+                }
+
                 <View style={styles.section}>
                     <LinedText text={"Allgemeine Sonderfertigkeiten"}/>
                     <View style={styles.sectionContent}>

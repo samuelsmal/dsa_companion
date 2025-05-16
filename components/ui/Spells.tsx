@@ -1,4 +1,4 @@
-import {Modal, Pressable, StyleSheet, Text, TouchableOpacity, View} from "react-native";
+import {Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import {useSQLiteContext} from "expo-sqlite";
 import {useEffect, useState} from "react";
 import {RawHero} from "@/constants/types/RawHero";
@@ -8,6 +8,8 @@ import {AntDesign, MaterialIcons} from "@expo/vector-icons";
 import {getAttributeNames, getSpells} from "@/constants/OptolithDatabase";
 import {Sizes} from "@/constants/Sizes";
 import {CharacterInGame} from "@/constants/types/CharacterInGame";
+import {AbilityAttribute, AbilityCheck, calculateResult} from "@/constants/types/AbilityCheck";
+import {t} from "@/constants/Translate";
 
 type SpellProps = {
     locale: string;
@@ -149,9 +151,10 @@ const styles = StyleSheet.create({
         padding: 10,
     },
     abilityCheckExplanation: {
-        flexDirection: "row",
-        columnGap: 5,
+        flexDirection: "column",
+        rowGap: 5,
         fontSize: Sizes.attributeValue,
+        alignItems: "center",
     },
     modalTitleTextAbility: {
         fontSize: Sizes.attributeValue + 2,
@@ -191,25 +194,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     }
 })
-
-type AbilityAttribute = {
-    id: string;
-    name: string;
-    value: number;
-    diceValue: number;
-    result: number
-}
-
-type AbilityCheck = {
-    abilityId: string;
-    abilityName: string;
-    abilityType: string;
-    abilityValue: number;
-    attributes: AbilityAttribute[];
-    difficulty: number;
-    resultNumber: number;
-    result: number;
-}
 
 const Spells = (props: SpellProps) => {
     const db = useSQLiteContext();
@@ -268,15 +252,16 @@ const Spells = (props: SpellProps) => {
     const renderItems = (items: Spell[]) => {
         return items.map((item: Spell) => (
             <View style={styles.item} key={"spell__" + item.id}>
-                <Pressable style={{flexDirection: "row", borderColor: "red", borderWidth: 1, flexGrow: 1}} key={"pressable__spell__info__" + item.id}
+                <Pressable style={{flexDirection: "column", flexGrow: 1, paddingRight: Sizes.columnGap}}
+                           key={"pressable__spell__info__" + item.id}
                            onPress={() => {
                                setInfoModal({
                                    isVisible: true,
                                    spellOfInterest: item,
                                })
                            }}>
-                    <View style={{flexDirection: "row",borderColor: "blue", borderWidth: 1}}>
-                        <View>
+                    <View style={{flexDirection: "row"}}>
+                        <View style={{flexGrow: 1}}>
                             <Text style={styles.name}>{item.name}</Text>
                         </View>
                         <View>
@@ -284,28 +269,29 @@ const Spells = (props: SpellProps) => {
                         </View>
                     </View>
                 </Pressable>
-                <Pressable style={{borderColor: "green", borderWidth: 1}} key={"pressable__spell__check__" + item.id} onPress={() => {
-                    const attributes = [item.check1, item.check2, item.check3]
-                        .map(checkId => ({
-                            id: checkId,
-                            name: attrs?.get(checkId)?.name || "",
-                            value: attrs?.get(checkId)?.value || 0,
-                            diceValue: generateRandomInteger(),
-                            result: 0
-                        }))
+                <Pressable key={"pressable__spell__check__" + item.id}
+                           onPress={() => {
+                               const attributes = [item.check1, item.check2, item.check3]
+                                   .map(checkId => ({
+                                       id: checkId,
+                                       name: attrs?.get(checkId)?.name || "",
+                                       value: attrs?.get(checkId)?.value || 0,
+                                       diceValue: generateRandomInteger(),
+                                       result: 0
+                                   }))
 
-                    setAbilityCheck(calculateResult({
-                        abilityId: item.id,
-                        abilityName: item.name,
-                        abilityType: "SPELL",
-                        abilityValue: item.value || 0,
-                        attributes: attributes,
-                        difficulty: 0,
-                        resultNumber: 0,
-                        result: 0
-                    }))
-                    setCheckModalVisible(true)
-                }}>
+                               setAbilityCheck(calculateResult({
+                                   abilityId: item.id,
+                                   abilityName: item.name,
+                                   abilityType: "SPELL",
+                                   abilityValue: item.value || 0,
+                                   attributes: attributes,
+                                   difficulty: 0,
+                                   resultNumber: 0,
+                                   result: 0
+                               }))
+                               setCheckModalVisible(true)
+                           }}>
                     <View style={styles.checks}>
                         {
                             [item.check1, item.check2, item.check3].map((checkId, index) => {
@@ -340,40 +326,11 @@ const Spells = (props: SpellProps) => {
         })
     }
 
-    const calculateResult = (abilityCheck: AbilityCheck | null): AbilityCheck | null => {
-        if (abilityCheck === null) {
-            return null
-        }
-
-        const attributes = abilityCheck.attributes.map(attribute => {
-            return {
-                ...attribute,
-                result: Math.max(0, attribute.diceValue - attribute.value + abilityCheck.difficulty)
-            }
-        })
-
-        const resultNumber = (abilityCheck.abilityValue || 0)
-            - attributes.map(({result}) => result).reduce((a, b) => a + b, 0)
-        ;
-
-        let overallResult = resultNumber / 3;
-        overallResult = overallResult < 0 ? -1 : Math.ceil(overallResult);
-        overallResult = overallResult == 0 ? 1 : overallResult;
-        overallResult = Math.min(6, overallResult);
-
-        return {
-            ...abilityCheck,
-            attributes: attributes,
-            resultNumber: resultNumber,
-            result: overallResult
-        }
-    }
-
     const renderElements = (fnName: string, fn: (abilityAttribute: AbilityAttribute) => string | number | undefined) => {
         return abilityCheck?.attributes.map((attribute: AbilityAttribute, index) => {
             return (
                 <View style={[styles.modalBoxedNumber, {backgroundColor: AttributeColors.get(attribute.id)?.main}]}
-                      key={"check__" + fnName + index}>
+                      key={"spells__check__" + fnName + index}>
                     <Text style={[styles.modalBoxedNumberText, {color: AttributeColors.get(attribute.id)?.text}]}>
                         {fn(attribute)}
                     </Text>
@@ -385,7 +342,7 @@ const Spells = (props: SpellProps) => {
     const renderResults = () => {
         return abilityCheck?.attributes.map(({result}, index) => {
             return <View style={[styles.modalBoxedNumber, {backgroundColor: result >= 0 ? "green" : "red"}]}
-                         key={"check__result_" + index}>
+                         key={"spells__check__result_" + index}>
                 <Text style={[styles.modalBoxedNumberText, {color: "white"}]}>
                     {result}
                 </Text>
@@ -416,21 +373,23 @@ const Spells = (props: SpellProps) => {
 
         return (
             <View style={styles.abilityCheckExplanation}>
-                <Text style={styles.modalTitleAbilityValueText}>{abilityCheck.abilityValue}</Text>
-                {
-                    abilityCheck.attributes.map(({id, result}, index) => {
-                        return (
-                            <Text key={"explanation__" + index}
-                                  style={{fontSize: Sizes.attributeValue, color: AttributeColors.get(id)?.main}}>
-                                - {result}
-                            </Text>
-                        )
-                    })
-                }
-                <Text style={{fontSize: Sizes.attributeValue}}>
-                    {"= " + abilityCheck.resultNumber}
-                </Text>
-                <AntDesign name="arrowright" size={Sizes.attributeValue} color="black"/>
+                <View style={{flexDirection: "row", columnGap: Sizes.columnGap}}>
+                    <Text style={styles.modalTitleAbilityValueText}>{abilityCheck.abilityValue}</Text>
+                    {
+                        abilityCheck.attributes.map(({id, result}, index) => {
+                            return (
+                                <Text key={"spells__explanation__" + index}
+                                      style={{fontSize: Sizes.attributeValue, color: AttributeColors.get(id)?.main}}>
+                                    - {result}
+                                </Text>
+                            )
+                        })
+                    }
+                    <Text style={{fontSize: Sizes.attributeValue}}>
+                        {"= " + abilityCheck.resultNumber}
+                    </Text>
+                </View>
+                <AntDesign name="arrowdown" size={Sizes.attributeValue} color="black"/>
                 <Text
                     style={[{fontSize: Sizes.attributeValue}, abilityCheck.result > 0 ? styles.checkSuccessText : styles.checkFailureText]}>
                     {abilityCheck.result < 0 ? "Nicht bestanden!" : "QS" + abilityCheck.result}
@@ -438,6 +397,7 @@ const Spells = (props: SpellProps) => {
             </View>
         )
     }
+
     const renderInfoModal = () => {
         if (infoModal.spellOfInterest !== null) {
             return (
@@ -448,31 +408,28 @@ const Spells = (props: SpellProps) => {
                                 <Text style={styles.modalTitleText}>{infoModal.spellOfInterest.name}</Text>
                             </View>
                         </View>
-                        <View style={{flexDirection: "column"}}>
-                            <View>
-                                <Text>Kosten:</Text>
-                                <Text>{infoModal.spellOfInterest.aeCost}</Text>
+                        <ScrollView>
+                            <View style={{flexDirection: "column"}}>
+                                {[
+                                    "aeCost",
+                                    "castingTime",
+                                    "range",
+                                    "duration",
+                                    "effect",
+                                ].map(attr => (
+                                    <View key={"spells__info__" + attr}>
+                                        <Text
+                                            style={{fontSize: Sizes.attributeName}}>{t.get(attr)}</Text>
+                                        <Text
+                                            style={{fontSize: Sizes.attributeValue - 4}}>{infoModal.spellOfInterest[attr]}</Text>
+                                    </View>
+                                ))}
                             </View>
-                            <View>
-                                <Text>Zauberdauer:</Text>
-                                <Text>{infoModal.spellOfInterest.duration}</Text>
-                            </View>
-                            <View>
-                                <Text>Reichweite:</Text>
-                                <Text>{infoModal.spellOfInterest.range}</Text>
-                            </View>
-                            <View>
-                                <Text>Wirkungsdauer:</Text>
-                                <Text>{infoModal.spellOfInterest.duration}</Text>
-                            </View>
-                            <View>
-                                <Text>Effekt:</Text>
-                                <Text>{infoModal.spellOfInterest.effect}</Text>
-                            </View>
-                        </View>
+                        </ScrollView>
                         <View style={styles.modalButton}>
-                            <TouchableOpacity onPress={() => setInfoModal({isVisible: false, spellOfInterest: null})}
-                                              style={styles.modalButtonDone}>
+                            <TouchableOpacity
+                                onPress={() => setInfoModal({isVisible: false, spellOfInterest: null})}
+                                style={styles.modalButtonDone}>
                                 <AntDesign name="checkcircle" size={24} color="black"/>
                             </TouchableOpacity>
                         </View>
