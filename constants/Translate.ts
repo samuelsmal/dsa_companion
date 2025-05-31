@@ -1,8 +1,17 @@
 export const t = new Map<string, string>([
     ["aeCost", "Kosten"],
+    ["amount", "Anzahl"],
+    ["cantrips", "Zaubertricks"],
     ["castingTime", "Zauberdauer"],
-    ["range", "Reichweite"],
+    ["combatTechnique", "Waffentechnik"],
     ["duration", "Wirkungsdauer"],
     ["effect", "Wirkung"],
-    ["cantrips", "Zaubertricks"]
+    ["iniMod", "iniMod"],
+    ["length", "Länge"],
+    ["price", "Wert"],
+    ["range", "Reichweite"],
+    ["range", "Reichweite"],
+    ["reach", "Reichweite"],
+    ["reloadTime", "Nachladezeit"],
+    ["weight", "Gewicht"],
 ])

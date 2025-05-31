@@ -2,13 +2,10 @@ import {Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View} 
 import {useSQLiteContext} from "expo-sqlite";
 import {useEffect, useState} from "react";
 import {RawHero} from "@/constants/types/RawHero";
-import {createSections, generateRandomInteger, groupBy} from "@/constants/HelperFunctions";
-import {AttributeColors, Colors} from "@/constants/Colors";
-import {AntDesign, MaterialIcons} from "@expo/vector-icons";
-import {getAttributeNames, getCantrips} from "@/constants/OptolithDatabase";
+import {Colors} from "@/constants/Colors";
+import {AntDesign} from "@expo/vector-icons";
+import {getCantrips} from "@/constants/OptolithDatabase";
 import {Sizes} from "@/constants/Sizes";
-import {CharacterInGame} from "@/constants/types/CharacterInGame";
-import {AbilityAttribute, AbilityCheck, calculateResult} from "@/constants/types/AbilityCheck";
 import {t} from "@/constants/Translate";
 
 type CantripProps = {
@@ -120,7 +117,7 @@ const Cantrips = (props: CantripProps) => {
 
     const [cantrips, setCantrips] = useState<Cantrip[]>([])
 
-    const [infoModal, setInfoModal] = useState<{ isVisible: boolean, cantripOfInterest: Cantrip | null}>({
+    const [infoModal, setInfoModal] = useState<{ isVisible: boolean, cantripOfInterest: Cantrip | null }>({
         isVisible: false,
         cantripOfInterest: null
     })
@@ -171,7 +168,7 @@ const Cantrips = (props: CantripProps) => {
                                     "duration",
                                     "effect",
                                 ].map(attr => (
-                                    <View key={"spells__info__" + attr}>
+                                    <View key={"cantrip__spells__info__" + attr}>
                                         <Text
                                             style={{fontSize: Sizes.attributeName}}>{t.get(attr)}</Text>
                                         <Text

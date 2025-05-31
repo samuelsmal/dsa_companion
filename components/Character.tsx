@@ -16,6 +16,7 @@ import Spells from "@/components/ui/Spells";
 import Vantages from "@/components/ui/Vantages";
 import {t} from "@/constants/Translate";
 import Cantrips from "@/components/ui/Cantrips";
+import Belongings from "@/components/ui/Belongings";
 
 const styles = StyleSheet.create({
     container: {
@@ -327,12 +328,10 @@ const Character = () => {
 
                 <View style={styles.section}>
                     <LinedText text={"Ausrüstung"}/>
-                    <View style={styles.sectionBelongings}>
-                        {
-                            Object.keys(characterData.belongings.items).map((key: string, index: number) => (
-                                <Text>{characterData.belongings.items[key].name}</Text>
-                            ))
-                        }
+                    <View style={styles.sectionContent}>
+                        <Belongings locale={locale}
+                                    characterInGame={characterInGame}
+                                    characterBelongings={Object.values(characterData.belongings.items)}/>
                     </View>
                 </View>
             </View>
